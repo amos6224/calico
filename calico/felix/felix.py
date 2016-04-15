@@ -61,8 +61,8 @@ def _main_greenlet(config):
     its children if desired.
     """
     try:
-        httpd = HTTPServer(("0.0.0.0", 8000), MetricsHandler)
-        stats_server = gevent.Greenlet(httpd.serve_forever, 8000)
+        httpd = HTTPServer(("0.0.0.0", 9091), MetricsHandler)
+        stats_server = gevent.Greenlet(httpd.serve_forever)
         stats_server.start()
 
         _log.info("Connecting to etcd to get our configuration.")
