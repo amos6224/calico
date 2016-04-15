@@ -20,10 +20,17 @@ Stats collection functions.
 """
 
 import logging
+import re
+
+from prometheus_client import Gauge, Summary
 
 from calico.monotonic import monotonic_time
 
 _log = logging.getLogger(__name__)
+
+
+def sanitize_name(name):
+    return re.sub(r'[^a-zA-Z0-9]', '_', name)
 
 
 class RateStat(object):
@@ -34,7 +41,9 @@ class RateStat(object):
         self.name = name
         self.start_time = None
         self.count = None
+        self.gauge = Gauge("felix_" + sanitize_name(name) + "_rate", "Rate of %s" % name)
         self.reset()
+        self.gauge.set_function(lambda: self.rate)
 
     def reset(self):
         self.start_time = monotonic_time()
@@ -69,6 +78,7 @@ class AggregateStat(RateStat):
         self.max = None
         self.min = None
         self.sum = None
+        self.summary = Summary("felix_" + sanitize_name(name), "%s in %s" % (name, unit))
         self.reset()
 
     def reset(self):
@@ -84,6 +94,7 @@ class AggregateStat(RateStat):
             self.max = value
         if self.min is None or value < self.min:
             self.min = value
+        self.summary.observe(value)
 
     @property
     def mean(self):

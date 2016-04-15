@@ -21,6 +21,8 @@ felix.felix
 The main logic for Felix.
 """
 # Monkey-patch before we do anything else...
+from BaseHTTPServer import HTTPServer
+
 from gevent import monkey
 monkey.patch_all()
 
@@ -31,6 +33,7 @@ import os
 import signal
 
 import gevent
+from prometheus_client import start_http_server, Summary, MetricsHandler
 
 from calico import common
 from calico.felix import devices
@@ -58,6 +61,10 @@ def _main_greenlet(config):
     its children if desired.
     """
     try:
+        httpd = HTTPServer(("0.0.0.0", 8000), MetricsHandler)
+        stats_server = gevent.Greenlet(httpd.serve_forever, 8000)
+        stats_server.start()
+
         _log.info("Connecting to etcd to get our configuration.")
         hosts_ipset_v4 = IpsetActor(HOSTS_IPSET_V4)
 
@@ -209,6 +216,7 @@ def _main_greenlet(config):
         _log.info("Starting polling for interface and etcd updates.")
         f = iface_watcher.watch_interfaces(async=True)
         monitored_items.append(f)
+        monitored_items.append(stats_server)
         etcd_api.start_watch(update_splitter, async=True)
 
         # Register a SIG_USR handler to trigger a diags dump.

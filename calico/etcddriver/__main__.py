@@ -28,6 +28,8 @@ import os
 import socket
 import sys
 
+from prometheus_client import start_http_server
+
 from calico.etcddriver import driver
 from calico import common
 
@@ -47,6 +49,8 @@ except:
 
 etcd_driver = driver.EtcdDriver(felix_sck)
 etcd_driver.start()
+
+start_http_server(8001)
 
 while not etcd_driver.join(timeout=1):
     parent_pid = os.getppid()
